@@ -22,6 +22,8 @@ export interface RoomState {
     joinerReady: boolean
     shotIndex: number
     gameId?: string
+    shots?: Array<{ fromRole: RoomRole; row: number; col: number; shotIndex: number; result?: 0 | 1 }>
+    lastUpdate?: number
 }
 
 const CHANNEL_NAME = 'darkwater-zk'

@@ -87,6 +87,11 @@ export function useGame(
     const stateRef = useRef(state)
     stateRef.current = state
 
+    // If a HIT_PROOF arrives before the attacker has added the corresponding shot
+    // to `myShots` (race between BroadcastChannel messages and React state updates),
+    // we buffer the result here and apply it when the shot is created.
+    const earlyProofsRef = useRef<Map<number, 0 | 1>>(new Map())
+
     const setError = (error: string) =>
         setState(prev => ({ ...prev, error, proofStatus: null }))
     const setStatus = (proofStatus: string | null) =>
@@ -126,8 +131,10 @@ export function useGame(
             }
 
             if (msg.type === 'HIT_PROOF') {
+                console.log('[BroadcastChannel] HIT_PROOF received:', msg)
                 const s2 = stateRef.current
                 if (s2.myShots.find(sh => sh.index === msg.shotIndex)) {
+                    console.log('[BroadcastChannel] Updating my shot with proof result')
                     const isHit = msg.result === 1
                     setState(prev => {
                         const newHits = isHit ? prev.myHits + 1 : prev.myHits
@@ -145,6 +152,11 @@ export function useGame(
                             proofStatus: `Opponent proved: ${isHit ? '💥 HIT' : '🌊 MISS'}`,
                         }
                     })
+                } else {
+                    // Race: proof can arrive before attacker adds the shot to local state.
+                    // Buffer it so we can apply it as soon as the shot is created.
+                    console.log('[BroadcastChannel] Shot not found in myShots; buffering proof for later')
+                    earlyProofsRef.current.set(msg.shotIndex, msg.result)
                 }
             }
 
@@ -218,6 +230,99 @@ export function useGame(
         const id = setInterval(poll, 3000)
         return () => { cancelled = true; clearInterval(id) }
     }, [state.phase, state.gameId, state.role]) // eslint-disable-line react-hooks/exhaustive-deps
+
+    // ---- Backend polling: sync shots and proofs across browsers ----
+    useEffect(() => {
+        const { phase, roomCode, role } = state
+        if (!roomCode || !role || (phase !== 'active' && phase !== 'waiting_proof')) return
+
+        console.log(`[${role}] 🔄 Starting backend polling for room: ${roomCode}`)
+
+        let cancelled = false
+        const pollBackend = async () => {
+            try {
+                const room = await loadRoom(roomCode)
+                if (cancelled || !room || !room.shots) return
+
+                console.log(`[${role}] Backend poll - room shots:`, room.shots)
+                console.log(`[${role}] Current phase:`, stateRef.current.phase)
+
+                const s = stateRef.current
+                
+                // Check for new incoming shots
+                const incomingShots = room.shots.filter(shot => shot.fromRole !== role)
+                console.log(`[${role}] Incoming shots from opponent:`, incomingShots)
+                
+                for (const shot of incomingShots) {
+                    const exists = s.incomingShots.find(s => s.index === shot.shotIndex)
+                    if (!exists) {
+                        // New shot received
+                        console.log(`[${role}] NEW SHOT RECEIVED:`, shot)
+                        const newShot: Shot = { row: shot.row, col: shot.col, result: 'pending', index: shot.shotIndex }
+                        setState(prev => ({
+                            ...prev,
+                            incomingShots: [...prev.incomingShots, newShot],
+                            phase: 'waiting_proof',
+                        }))
+                    } else if (exists.result === 'pending' && shot.result !== undefined) {
+                        // Proof received for existing shot
+                        console.log(`[${role}] PROOF RECEIVED for incoming shot:`, shot)
+                        const isHit = shot.result === 1
+                        setState(prev => {
+                            const newOppHits = prev.opponentHits + (isHit ? 1 : 0)
+                            const gameOver = newOppHits >= 17
+                            return {
+                                ...prev,
+                                incomingShots: prev.incomingShots.map(s =>
+                                    s.index === shot.shotIndex ? { ...s, result: isHit ? 'hit' : 'miss' } : s
+                                ),
+                                opponentHits: newOppHits,
+                                phase: gameOver ? 'game_over' : 'active',
+                                winner: gameOver ? 'opponent' : prev.winner,
+                            }
+                        })
+                    }
+                }
+
+                // Check for proofs on my shots
+                const myShots = room.shots.filter(shot => shot.fromRole === role)
+                console.log(`[${role}] My shots in backend:`, myShots)
+                console.log(`[${role}] My local shots:`, s.myShots)
+                
+                for (const shot of myShots) {
+                    console.log(`[${role}] Checking shot ${shot.shotIndex}, has result:`, shot.result !== undefined, 'result value:', shot.result)
+                    if (shot.result !== undefined) {
+                        const myShot = s.myShots.find(ms => ms.index === shot.shotIndex)
+                        console.log(`[${role}] Found local shot:`, myShot)
+                        if (myShot && myShot.result === 'pending') {
+                            console.log(`[${role}] PROOF RESULT for my shot:`, shot)
+                            const isHit = shot.result === 1
+                            setState(prev => {
+                                const newHits = prev.myHits + (isHit ? 1 : 0)
+                                const gameOver = newHits >= 17
+                                return {
+                                    ...prev,
+                                    myShots: prev.myShots.map(ms =>
+                                        ms.index === shot.shotIndex ? { ...ms, result: isHit ? 'hit' : 'miss' } : ms
+                                    ),
+                                    myHits: newHits,
+                                    phase: gameOver ? 'game_over' : 'active',
+                                    winner: gameOver ? 'me' : prev.winner,
+                                    proofStatus: `Opponent proved: ${isHit ? '💥 HIT' : '🌊 MISS'}`,
+                                }
+                            })
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Backend poll error:', e)
+            }
+        }
+
+        pollBackend()
+        const interval = setInterval(pollBackend, 2000)
+        return () => { cancelled = true; clearInterval(interval) }
+    }, [state.phase, state.roomCode, state.role])
 
     // ---- Idle/lobby: fetch on-chain room list ----
     useEffect(() => {
@@ -350,7 +455,8 @@ export function useGame(
                     broadcastMsg({ type: 'JOINER_JOINED', code: trimmed })
                 } catch (e) {
                     console.error('❌ Failed to join:', e)
-                    setError(e instanceof Error ? e.message : 'Failed to join on-chain')
+                    const errorMsg = e instanceof Error ? e.message : (typeof e === 'object' && e !== null ? JSON.stringify(e) : 'Failed to join on-chain')
+                    setError(errorMsg)
                     // Keep the state so the error message stays visible
                 }
                 return
@@ -420,7 +526,9 @@ export function useGame(
 
             broadcastMsg({ type: 'JOINER_JOINED', code: roomCode })
         } catch (e: unknown) {
-            setError(e instanceof Error ? e.message : 'Failed to join game on-chain')
+            console.error('❌ Failed to join by ID:', e)
+            const errorMsg = e instanceof Error ? e.message : (typeof e === 'object' && e !== null ? JSON.stringify(e) : 'Failed to join game on-chain')
+            setError(errorMsg)
             // Keep the state so errorbanner shows
         }
     }, [publicKey, signTransaction])
@@ -478,8 +586,46 @@ export function useGame(
 
             broadcastMsg({ type: 'SHOT', code: roomCode, fromRole: role, row, col, shotIndex })
 
-            const shot: Shot = { row, col, result: 'pending', index: shotIndex }
-            setState(prev => ({ ...prev, myShots: [...prev.myShots, shot], phase: 'waiting_proof' }))
+            // Save shot to backend for cross-browser sync
+            console.log(`[${role}] 💾 Saving shot to backend - shotIndex: ${shotIndex}, row: ${row}, col: ${col}`)
+            const room = await loadRoom(roomCode)
+            console.log(`[${role}] Current room before saving shot:`, room)
+            if (room) {
+                if (!room.shots) room.shots = []
+                room.shots.push({ fromRole: role, row, col, shotIndex })
+                room.lastUpdate = Date.now()
+                await saveRoom(room)
+                console.log(`[${role}] ✅ Shot saved to backend! Total shots: ${room.shots.length}`)
+            } else {
+                console.error(`[${role}] ❌ Room not found when trying to save shot!`)
+            }
+
+            const buffered = earlyProofsRef.current.get(shotIndex)
+            const immediateResult: Shot['result'] =
+                buffered === 1 ? 'hit' : buffered === 0 ? 'miss' : 'pending'
+            if (buffered !== undefined) earlyProofsRef.current.delete(shotIndex)
+
+            const shot: Shot = { row, col, result: immediateResult, index: shotIndex }
+            setState(prev => {
+                const nextMyShots = [...prev.myShots, shot]
+
+                // If we already have the proof, apply scoring + status immediately.
+                const isHit = immediateResult === 'hit'
+                const newHits = prev.myHits + (isHit ? 1 : 0)
+                const gameOver = newHits >= 17
+
+                return {
+                    ...prev,
+                    myShots: nextMyShots,
+                    myHits: newHits,
+                    phase: gameOver ? 'game_over' : (immediateResult === 'pending' ? 'waiting_proof' : 'active'),
+                    winner: gameOver ? 'me' : prev.winner,
+                    proofStatus: immediateResult === 'pending'
+                        ? prev.proofStatus
+                        : `Opponent proved: ${isHit ? '💥 HIT' : '🌊 MISS'}`,
+                }
+            })
+            console.log(`[${role}] Phase changed after firing shot; immediateResult=${immediateResult}`)
 
             // Timeout fallback: if no proof received in 30 seconds, show error
             setTimeout(() => {
@@ -512,6 +658,28 @@ export function useGame(
             }
 
             broadcastMsg({ type: 'HIT_PROOF', code: roomCode, shotIndex, result })
+
+            // Save proof result to backend for cross-browser sync
+            console.log(`[${role}] Saving proof result to backend - shotIndex: ${shotIndex}, result: ${result}`)
+            const room = await loadRoom(roomCode)
+            console.log(`[${role}] Current room state:`, room)
+            if (room && room.shots) {
+                // Find the OPPONENT's shot (not mine) that I'm responding to
+                const opponentRole = role === 'host' ? 'joiner' : 'host'
+                const shotToUpdate = room.shots.find(s => s.fromRole === opponentRole && s.shotIndex === shotIndex)
+                console.log(`[${role}] Shot to update (from ${opponentRole}):`, shotToUpdate)
+                if (shotToUpdate) {
+                    shotToUpdate.result = result
+                    room.lastUpdate = Date.now()
+                    await saveRoom(room)
+                    console.log(`[${role}] ✅ Proof result saved to backend!`)
+                } else {
+                    console.warn(`[${role}] ⚠️ Shot with index ${shotIndex} from ${opponentRole} not found in room.shots`)
+                    console.warn(`[${role}] Available shots:`, room.shots)
+                }
+            } else {
+                console.warn(`[${role}] ⚠️ Room or room.shots not found`)
+            }
 
             const newOppHits = opponentHits + (result === 1 ? 1 : 0)
             const gameOver = newOppHits >= 17
