@@ -1,0 +1,31 @@
+services:
+  # Backend API
+  - type: web
+    name: darkwater-backend
+    env: node
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+  # Frontend
+  - type: web
+    name: darkwater-frontend
+    env: static
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: darkwater-backend
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: VITE_BATTLESHIP_CONTRACT_ID
+        sync: false
+      - key: VITE_VERIFIER_CONTRACT_ID
+        sync: false
+      - key: VITE_STELLAR_RPC_URL
+        value: https://soroban-testnet.stellar.org
+      - key: VITE_STELLAR_PASSPHRASE
+        value: Test SDF Network ; September 2015

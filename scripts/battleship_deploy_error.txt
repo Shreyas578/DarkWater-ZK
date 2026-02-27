@@ -1,0 +1,51 @@
+﻿.\stellar.exe : 
+Γä╣∩╕Å  Simulating 
+install 
+transactionΓÇª
+At line:1 char:1
++ .\stellar.exe 
+contract deploy 
+--wasm ..\contracts\t
+arget\wasm32-unkno 
+...
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (Γä╣∩╕Å    
+  Simulat... tran    
+sactionΓÇª:Strin    
+g) [], RemoteExc    
+eption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+Γ¥î error: 
+transaction 
+simulation failed: 
+HostError: 
+Error(WasmVm, 
+InvalidAction)
+
+Event log (newest 
+first):
+   0: [Diagnostic 
+Event] 
+topics:[error, 
+Error(WasmVm, 
+InvalidAction)], data
+:"Module(Translation(
+TranslationError { 
+inner: Validate(Binar
+yReaderError { 
+inner: BinaryReaderEr
+rorInner { message: 
+"reference-types not 
+enabled: zero byte 
+expected", offset: 
+22008, needed_hint: 
+None } }) }))"
+

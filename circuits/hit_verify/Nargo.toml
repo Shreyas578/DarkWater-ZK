@@ -1,0 +1,7 @@
+[package]
+name = "hit_verify"
+type = "bin"
+authors = ["DarkWater ZK"]
+compiler_version = ">=0.36.0"
+
+[dependencies]

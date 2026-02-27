@@ -1,0 +1,108 @@
+﻿..\scripts\stellar.ex
+e : Γä╣∩╕Å  CARGO_BUI
+LD_RUSTFLAGS=--remap-
+path-prefix=C:/Users/
+vijay/.cargo/registry
+/src= cargo rustc --m
+anifest-path=battlesh
+ip_game\Cargo.toml 
+--crate-type=cdylib -
+-target=wasm32v1-none
+ --release
+At line:1 char:1
++ ..\scripts\stellar.
+exe contract build 
+--package 
+battleship-game 
+--opt ...
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (Γä╣∩╕Å    
+  CARGO_B...-none    
+ --release:Strin    
+g) [], RemoteExc    
+eption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+warning: profiles 
+for the non root 
+package will be 
+ignored, specify 
+profiles at the 
+workspace root:
+package:   D:\Project
+s\DarkWater ZK\contra
+cts\battleship_game\C
+argo.toml
+workspace: D:\Project
+s\DarkWater ZK\contra
+cts\Cargo.toml
+warning: profiles 
+for the non root 
+package will be 
+ignored, specify 
+profiles at the 
+workspace root:
+package:   D:\Project
+s\DarkWater ZK\contra
+cts\verifier\Cargo.to
+ml
+workspace: D:\Project
+s\DarkWater ZK\contra
+cts\Cargo.toml
+   Compiling 
+escape-bytes v0.1.1
+   Compiling 
+num-traits v0.2.19
+   Compiling 
+static_assertions 
+v1.1.0
+   Compiling ethnum 
+v1.5.2
+error[E0463]: can't 
+find crate for `core`
+  |
+  = note: the 
+`wasm32v1-none` 
+target may not be 
+installed
+  = help: consider 
+downloading the 
+target with `rustup 
+target add 
+wasm32v1-none`
+
+For more information 
+about this error, 
+try `rustc --explain 
+E0463`.
+error: could not 
+compile 
+`escape-bytes` (lib) 
+due to 1 previous 
+error
+warning: build 
+failed, waiting for 
+other jobs to 
+finish...
+error: could not 
+compile 
+`static_assertions` 
+(lib) due to 1 
+previous error
+error: could not 
+compile `ethnum` 
+(lib) due to 1 
+previous error
+error: could not 
+compile `num-traits` 
+(lib) due to 1 
+previous error
+Γ¥î error: exit 
+status exit code: 101

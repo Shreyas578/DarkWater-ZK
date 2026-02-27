@@ -1,0 +1,15 @@
+{
+  "name": "darkwater-zk",
+  "version": "1.0.0",
+  "description": "Zero-Knowledge Battleship on Stellar Soroban",
+  "private": true,
+  "scripts": {
+    "build": "cd frontend && npm ci && npm run build"
+  },
+  "keywords": ["stellar", "soroban", "zk", "noir", "battleship", "blockchain"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1"
+  }
+}

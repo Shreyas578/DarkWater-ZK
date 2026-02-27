@@ -1,0 +1,56 @@
+﻿Add a new identity (keypair, ledger, OS specific secure store)
+
+Usage: stellar.exe keys add [OPTIONS] <NAME>
+
+Arguments:
+  <NAME>
+          Name of identity
+
+Options:
+      --secret-key
+          ΓÜá∩╕Å Deprecated, use `--secure-store`. Enter secret (S) key when prompted
+
+      --seed-phrase
+          ΓÜá∩╕Å Deprecated, use `--secure-store`. Enter key using 12-24 word seed phrase
+
+      --secure-store
+          Save the new key in your OS's credential secure store.
+          
+          On Mac this uses Keychain, on Windows it is Secure Store Service, and on *nix platforms it uses a combination of the kernel keyutils and DBus-based Secret Service.
+          
+          This only supports seed phrases for now.
+
+      --public-key <PUBLIC_KEY>
+          Add a public key, ed25519, or muxed account, e.g. G1.., M2..
+
+      --overwrite
+          Overwrite existing identity if it already exists
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+Options (Global):
+  -f, --filter-logs <FILTER_LOGS>
+          Filter logs output. To turn on `stellar_cli::log::footprint=debug` or off `=off`. Can also use env var `RUST_LOG`
+
+      --global
+          ΓÜá∩╕Å Deprecated: global config is always on
+
+  -q, --quiet
+          Do not write logs to stderr including `INFO`
+
+      --config-dir <CONFIG_DIR>
+          Location of config directory. By default, it uses `$XDG_CONFIG_HOME/stellar` if set, falling back to `~/.config/stellar` otherwise. Contains configuration files, aliases, and other persistent settings
+
+  -v, --verbose
+          Log DEBUG events
+
+      --very-verbose
+          Log DEBUG and TRACE events
+          
+          [aliases: --vv]
+
+      --no-cache
+          Do not cache your simulations and transactions
+          
+          [env: STELLAR_NO_CACHE=]

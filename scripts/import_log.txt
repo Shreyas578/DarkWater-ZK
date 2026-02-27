@@ -1,0 +1,32 @@
+﻿.\stellar.exe : 
+error: unrecognized 
+subcommand 'import'
+At line:1 char:1
++ .\stellar.exe keys 
+import 
+darkwater-deployer 
+--secret-key 
+SAIV2DSXPPR ...
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (error:    
+ unrecognized sub    
+command 'import'    
+:String) [], Rem    
+oteException
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+
+Usage: stellar.exe 
+keys [OPTIONS] 
+<COMMAND>
+
+For more 
+information, try 
+'--help'.
